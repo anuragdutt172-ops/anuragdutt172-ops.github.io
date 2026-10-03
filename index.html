@@ -1,37 +1,769 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Quad</title>
-    <style>
-        body { margin: 0; overflow: hidden; }
-        canvas { display: block; }
-    </style>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Depth — Interactive 3D</title>
+
+  <style>
+
+    * {
+
+      margin: 0;
+
+      padding: 0;
+
+      box-sizing: border-box;
+
+    }
+
+    html,
+
+    body {
+
+      width: 100%;
+
+      height: 100%;
+
+      overflow: hidden;
+
+      background: #050505;
+
+      font-family: Inter, Arial, Helvetica, sans-serif;
+
+    }
+
+    #scene {
+
+      position: fixed;
+
+      inset: 0;
+
+      z-index: 0;
+
+    }
+
+    .content {
+
+      position: fixed;
+
+      inset: 0;
+
+      z-index: 2;
+
+      display: flex;
+
+      justify-content: center;
+
+      align-items: center;
+
+      text-align: center;
+
+      pointer-events: none;
+
+    }
+
+    .hero {
+
+      opacity: 0;
+
+      transform: translateY(25px);
+
+      animation: fadeIn 1.8s cubic-bezier(.2,.8,.2,1) forwards;
+
+      animation-delay: .4s;
+
+    }
+
+    .eyebrow {
+
+      margin-bottom: 18px;
+
+      color: rgba(255,255,255,.45);
+
+      font-size: 11px;
+
+      font-weight: 600;
+
+      letter-spacing: .35em;
+
+      text-transform: uppercase;
+
+    }
+
+    h1 {
+
+      color: #fff;
+
+      font-size: clamp(4rem, 11vw, 10rem);
+
+      line-height: .85;
+
+      font-weight: 800;
+
+      letter-spacing: -.075em;
+
+    }
+
+    .subtitle {
+
+      max-width: 520px;
+
+      margin: 28px auto 0;
+
+      color: rgba(255,255,255,.48);
+
+      font-size: 14px;
+
+      line-height: 1.7;
+
+      letter-spacing: .02em;
+
+    }
+
+    .hint {
+
+      position: fixed;
+
+      left: 50%;
+
+      bottom: 35px;
+
+      transform: translateX(-50%);
+
+      z-index: 3;
+
+      color: rgba(255,255,255,.28);
+
+      font-size: 10px;
+
+      letter-spacing: .25em;
+
+      text-transform: uppercase;
+
+      opacity: 0;
+
+      animation: fadeHint 2s ease forwards;
+
+      animation-delay: 2s;
+
+    }
+
+    @keyframes fadeIn {
+
+      to {
+
+        opacity: 1;
+
+        transform: translateY(0);
+
+      }
+
+    }
+
+    @keyframes fadeHint {
+
+      to {
+
+        opacity: 1;
+
+      }
+
+    }
+
+    @media (max-width: 600px) {
+
+      h1 {
+
+        font-size: 20vw;
+
+      }
+
+      .subtitle {
+
+        width: 85%;
+
+        font-size: 13px;
+
+      }
+
+    }
+
+  </style>
+
 </head>
+
 <body>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
 
-        const geometry = new THREE.PlaneGeometry(2, 2);
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide });
-        const quad = new THREE.Mesh(geometry, material);
-        scene.add(quad);
+  <canvas id="scene"></canvas>
 
-        camera.position.z = 5;
+  <div class="content">
 
-        function animate() {
-            requestAnimationFrame(animate);
-            quad.rotation.x += 0.01;
-            quad.rotation.y += 0.01;
-            renderer.render(scene, camera);
-        }
-        animate();
-    </script>
+    <div class="hero">
+
+      <div class="eyebrow">Interactive Experience</div>
+
+      <h1>DEPTH</h1>
+
+      <p class="subtitle">
+
+        Move your cursor through the space and explore a world of
+
+        floating geometry, light and motion.
+
+      </p>
+
+    </div>
+
+  </div>
+
+  <div class="hint">Move your cursor</div>
+
+  <script type="module">
+
+    import * as THREE from
+
+      "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js";
+
+    // --------------------------------------------------
+
+    // SETUP
+
+    // --------------------------------------------------
+
+    const canvas = document.getElementById("scene");
+
+    const scene = new THREE.Scene();
+
+    scene.background = new THREE.Color(0x050505);
+
+    const camera = new THREE.PerspectiveCamera(
+
+      55,
+
+      window.innerWidth / window.innerHeight,
+
+      0.1,
+
+      100
+
+    );
+
+    camera.position.z = 12;
+
+    const renderer = new THREE.WebGLRenderer({
+
+      canvas,
+
+      antialias: true,
+
+      alpha: false
+
+    });
+
+    renderer.setPixelRatio(
+
+      Math.min(window.devicePixelRatio, 2)
+
+    );
+
+    renderer.setSize(
+
+      window.innerWidth,
+
+      window.innerHeight
+
+    );
+
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    // --------------------------------------------------
+
+    // LIGHTING
+
+    // --------------------------------------------------
+
+    const ambientLight = new THREE.AmbientLight(
+
+      0xffffff,
+
+      0.7
+
+    );
+
+    scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(
+
+      0xffffff,
+
+      20,
+
+      40
+
+    );
+
+    pointLight.position.set(2, 3, 8);
+
+    scene.add(pointLight);
+
+    // --------------------------------------------------
+
+    // MATERIALS
+
+    // --------------------------------------------------
+
+    const materials = [
+
+      new THREE.MeshStandardMaterial({
+
+        color: 0x8d8d8d,
+
+        roughness: 0.3,
+
+        metalness: 0.8
+
+      }),
+
+      new THREE.MeshStandardMaterial({
+
+        color: 0x444444,
+
+        roughness: 0.15,
+
+        metalness: 0.95
+
+      }),
+
+      new THREE.MeshStandardMaterial({
+
+        color: 0xbdbdbd,
+
+        roughness: 0.5,
+
+        metalness: 0.4
+
+      })
+
+    ];
+
+    // --------------------------------------------------
+
+    // FLOATING OBJECTS
+
+    // --------------------------------------------------
+
+    const objects = [];
+
+    const geometries = [
+
+      new THREE.IcosahedronGeometry(1, 1),
+
+      new THREE.TorusGeometry(
+
+        0.8,
+
+        0.25,
+
+        16,
+
+        48
+
+      ),
+
+      new THREE.OctahedronGeometry(1, 0),
+
+      new THREE.TorusKnotGeometry(
+
+        0.7,
+
+        0.18,
+
+        80,
+
+        12
+
+      ),
+
+      new THREE.DodecahedronGeometry(0.9, 0),
+
+      new THREE.SphereGeometry(
+
+        0.75,
+
+        32,
+
+        32
+
+      )
+
+    ];
+
+    function random(min, max) {
+
+      return Math.random() * (max - min) + min;
+
+    }
+
+    for (let i = 0; i < 18; i++) {
+
+      const geometry =
+
+        geometries[
+
+          Math.floor(Math.random() * geometries.length)
+
+        ];
+
+      const material =
+
+        materials[
+
+          Math.floor(Math.random() * materials.length)
+
+        ].clone();
+
+      const mesh =
+
+        new THREE.Mesh(geometry, material);
+
+      mesh.position.set(
+
+        random(-7, 7),
+
+        random(-5, 5),
+
+        random(-4, 4)
+
+      );
+
+      const scale =
+
+        random(0.25, 1.25);
+
+      mesh.scale.setScalar(scale);
+
+      mesh.rotation.set(
+
+        random(0, Math.PI),
+
+        random(0, Math.PI),
+
+        random(0, Math.PI)
+
+      );
+
+      mesh.userData = {
+
+        baseX: mesh.position.x,
+
+        baseY: mesh.position.y,
+
+        baseZ: mesh.position.z,
+
+        rotationX: random(-0.01, 0.01),
+
+        rotationY: random(-0.01, 0.01),
+
+        rotationZ: random(-0.01, 0.01),
+
+        floatSpeed: random(0.3, 0.8),
+
+        floatAmount: random(0.15, 0.5),
+
+        parallax: random(0.15, 0.65),
+
+        phase: random(0, Math.PI * 2)
+
+      };
+
+      scene.add(mesh);
+
+      objects.push(mesh);
+
+    }
+
+    // --------------------------------------------------
+
+    // BACKGROUND PARTICLES
+
+    // --------------------------------------------------
+
+    const particleGeometry =
+
+      new THREE.BufferGeometry();
+
+    const particleCount = 800;
+
+    const positions =
+
+      new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount; i++) {
+
+      positions[i * 3] =
+
+        random(-20, 20);
+
+      positions[i * 3 + 1] =
+
+        random(-12, 12);
+
+      positions[i * 3 + 2] =
+
+        random(-15, 5);
+
+    }
+
+    particleGeometry.setAttribute(
+
+      "position",
+
+      new THREE.BufferAttribute(
+
+        positions,
+
+        3
+
+      )
+
+    );
+
+    const particleMaterial =
+
+      new THREE.PointsMaterial({
+
+        color: 0xffffff,
+
+        size: 0.018,
+
+        transparent: true,
+
+        opacity: 0.28,
+
+        depthWrite: false
+
+      });
+
+    const particles =
+
+      new THREE.Points(
+
+        particleGeometry,
+
+        particleMaterial
+
+      );
+
+    scene.add(particles);
+
+    // --------------------------------------------------
+
+    // MOUSE INTERACTION
+
+    // --------------------------------------------------
+
+    const mouse = {
+
+      x: 0,
+
+      y: 0
+
+    };
+
+    const targetMouse = {
+
+      x: 0,
+
+      y: 0
+
+    };
+
+    window.addEventListener(
+
+      "pointermove",
+
+      (event) => {
+
+        targetMouse.x =
+
+          (event.clientX / window.innerWidth) * 2 - 1;
+
+        targetMouse.y =
+
+          -(event.clientY / window.innerHeight) * 2 + 1;
+
+      }
+
+    );
+
+    // --------------------------------------------------
+
+    // ANIMATION
+
+    // --------------------------------------------------
+
+    const clock =
+
+      new THREE.Clock();
+
+    function animate() {
+
+      requestAnimationFrame(animate);
+
+      const elapsed =
+
+        clock.getElapsedTime();
+
+      // Smooth mouse movement
+
+      mouse.x +=
+
+        (targetMouse.x - mouse.x) * 0.05;
+
+      mouse.y +=
+
+        (targetMouse.y - mouse.y) * 0.05;
+
+      // Camera parallax
+
+      camera.position.x +=
+
+        (mouse.x * 1.2 - camera.position.x) * 0.025;
+
+      camera.position.y +=
+
+        (mouse.y * 0.7 - camera.position.y) * 0.025;
+
+      camera.lookAt(0, 0, 0);
+
+      // Floating geometry
+
+      objects.forEach((object) => {
+
+        const data =
+
+          object.userData;
+
+        object.position.y =
+
+          data.baseY +
+
+          Math.sin(
+
+            elapsed * data.floatSpeed +
+
+            data.phase
+
+          ) * data.floatAmount;
+
+        object.position.x =
+
+          data.baseX +
+
+          mouse.x * data.parallax;
+
+        object.position.z =
+
+          data.baseZ +
+
+          mouse.y * data.parallax;
+
+        object.rotation.x +=
+
+          data.rotationX;
+
+        object.rotation.y +=
+
+          data.rotationY;
+
+        object.rotation.z +=
+
+          data.rotationZ;
+
+      });
+
+      // Slowly move particles
+
+      particles.rotation.y =
+
+        elapsed * 0.008;
+
+      particles.rotation.x =
+
+        Math.sin(elapsed * 0.05) * 0.05;
+
+      // Subtle light movement
+
+      pointLight.position.x =
+
+        mouse.x * 5;
+
+      pointLight.position.y =
+
+        mouse.y * 4;
+
+      pointLight.position.z =
+
+        7 + Math.sin(elapsed) * 2;
+
+      renderer.render(
+
+        scene,
+
+        camera
+
+      );
+
+    }
+
+    animate();
+
+    // --------------------------------------------------
+
+    // RESPONSIVE
+
+    // --------------------------------------------------
+
+    window.addEventListener(
+
+      "resize",
+
+      () => {
+
+        camera.aspect =
+
+          window.innerWidth /
+
+          window.innerHeight;
+
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(
+
+          window.innerWidth,
+
+          window.innerHeight
+
+        );
+
+        renderer.setPixelRatio(
+
+          Math.min(window.devicePixelRatio, 2)
+
+        );
+
+      }
+
+    );
+
+  </script>
+
 </body>
+
 </html>
